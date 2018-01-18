@@ -28,7 +28,7 @@ RUN set -x; \
 
 # Install Flectra
 RUN set -x; \
-        curl -o flectra_1.0.latest_all.deb -SL https://download.flectrahq.com/1.0/pub/deb/flectra_1.0alpha.latest_all.deb \
+        curl -o flectra_1.0alpha.latest_all.deb -SL https://download.flectrahq.com/1.0/pub/deb/flectra_1.0alpha.latest_all.deb \
 		&& curl -o flectra_1.0alpha.latest_amd64.changes -SL https://download.flectrahq.com/1.0/pub/deb/flectra_1.0alpha.latest_amd64.changes \
 		&& echo "`sed -n '/^Checksums-Sha1:$/{n;p;n;p;n;p}' flectra_1.0alpha.latest_amd64.changes | tail -1 | awk '{print $1}'` flectra_1.0alpha.latest_all.deb" | sha1sum -c \
         && dpkg --force-depends -i flectra_1.0alpha.latest_all.deb \
