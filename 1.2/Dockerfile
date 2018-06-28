@@ -6,6 +6,8 @@ MAINTAINER FlectraHQ <flectra@flectrahq.com>
 
 # Generate locale C.UTF-8 for postgres and general locale data
 ENV LANG C.UTF-8
+ENV FLECTRA_VERSION=1.2
+ENV FLECTRA_RELEASE=latest
 
 # Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
 RUN set -x; \
@@ -28,13 +30,13 @@ RUN set -x; \
 
 # Install Flectra
 RUN set -x; \
-        curl -o flectra_1.2.latest_all.deb -SL https://download.flectrahq.com/1.0/pub/deb/flectra_1.2.latest_all.deb \
-		&& curl -o flectra_1.2.latest_amd64.changes -SL https://download.flectrahq.com/1.0/pub/deb/flectra_1.2.latest_amd64.changes \
-		&& echo "`sed -n '/^Checksums-Sha1:$/{n;p;n;p;n;p}' flectra_1.2.latest_amd64.changes | tail -1 | awk '{print $1}'` flectra_1.2.latest_all.deb" | sha1sum -c \
-        && dpkg --force-depends -i flectra_1.2.latest_all.deb \
+        curl -o flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb -SL https://download.flectrahq.com/1.0/pub/deb/flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb \
+		&& curl -o flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_amd64.changes -SL https://download.flectrahq.com/1.0/pub/deb/flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_amd64.changes \
+		&& echo "`sed -n '/^Checksums-Sha1:$/{n;p;n;p;n;p}' flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_amd64.changes | tail -1 | awk '{print $1}'` flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb" | sha1sum -c \
+        && dpkg --force-depends -i flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb \
         && apt-get update \
         && apt-get -y install -f --no-install-recommends \
-        && rm -rf /var/lib/apt/lists/* flectra_1.2.latest_all.deb
+        && rm -rf /var/lib/apt/lists/* flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb
 
 # Copy entrypoint script and Flectra configuration file
 RUN pip3 install num2words
