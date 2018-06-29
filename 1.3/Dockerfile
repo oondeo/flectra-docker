@@ -43,6 +43,7 @@ RUN pip3 install num2words
 COPY ./entrypoint.sh /
 COPY ./flectra.conf /etc/flectra/
 RUN chown flectra /etc/flectra/flectra.conf
+RUN chmod +x /entrypoint.sh
 
 # Mount /var/lib/flectra to allow restoring filestore and /mnt/extra-addons for users addons
 RUN mkdir -p /mnt/extra-addons \
