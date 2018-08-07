@@ -39,7 +39,6 @@ RUN set -x; \
         && rm -rf /var/lib/apt/lists/* flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb
 
 # Copy entrypoint script and Flectra configuration file
-RUN pip3 install num2words
 COPY ./entrypoint.sh /
 COPY ./flectra.conf /etc/flectra/
 RUN chown flectra /etc/flectra/flectra.conf
