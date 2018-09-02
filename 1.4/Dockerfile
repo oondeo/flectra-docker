@@ -21,12 +21,13 @@ RUN set -x; \
             python3-renderpm \
             libssl1.0-dev \
             xz-utils \
+	    rsync \
         && curl -o wkhtmltox.tar.xz -SL https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz \
         && echo '3f923f425d345940089e44c1466f6408b9619562 wkhtmltox.tar.xz' | sha1sum -c - \
         && tar xvf wkhtmltox.tar.xz \
         && cp wkhtmltox/lib/* /usr/local/lib/ \
         && cp wkhtmltox/bin/* /usr/local/bin/ \
-        && cp -r wkhtmltox/share/man/man1 /usr/local/share/man/
+        && rm -rf /var/lib/apt/lists/* && rm wkhtmltox.tar.xz && rm -rf wkhtmltox
 
 # Install Flectra
 RUN set -x; \
@@ -47,16 +48,22 @@ RUN chmod +x /entrypoint.sh
 # Mount /var/lib/flectra to allow restoring filestore and /mnt/extra-addons for users addons
 RUN mkdir -p /mnt/extra-addons \
         && chown -R flectra /mnt/extra-addons
-VOLUME ["/var/lib/flectra", "/mnt/extra-addons"]
 
-# Expose Flectra services
-EXPOSE 7073 7072
 
 # Set the default config file
 ENV FLECTRA_RC /etc/flectra/flectra.conf
 
+#openshift compat
+RUN chgrp -R 0 /mnt/extra-addons /var/lib/flectra && chmod -R 775 /var/lib/flectra /mnt && chmod g+w /etc/passwd  
+
 # Set default user when running the container
-USER flectra
+USER 101
+
+# Expose Flectra services
+EXPOSE 7073 7072
+
+#This must be set after run commands
+VOLUME ["/var/lib/flectra", "/mnt"]
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["flectra"]

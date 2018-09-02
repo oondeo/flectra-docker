@@ -1,0 +1,188 @@
+---
+#kubectl annotate deploy/alpine deployment.kubernetes.io/triggered-by=configmap/alpine -n demo
+#kubectl create configmap flectra-conf --from-file openerp-server.conf -o yaml --dry-run | kubectl replace -f -
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: flectra
+spec:
+  ports:
+  - name: flectra-longpoll
+    port: 7072
+    targetPort: 7072
+    protocol: TCP
+  - name: flectra
+    port: 7073
+    targetPort: 7073
+    protocol: TCP
+  selector:
+    app: flectra
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: flectra
+  annotations:
+    kubernetes.io/tls-acme: "true"
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  tls:
+  - hosts:
+    - flectra.192.168.42.4.xip.io
+    secretName: flectra-tls
+  rules:
+  - host: flectra.192.168.42.4.xip.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: flectra
+          servicePort: 7073
+      - path: /longpolling
+        backend:
+          serviceName: flectra
+          servicePort: 7072
+--- 
+#oc create configmap flectra-rc --from-file flectra.conf -o yaml 
+apiVersion: v1
+data:
+  flectra.conf: |
+    [options]
+    addons_path = /mnt/extra-addons
+    data_dir = /var/lib/flectra
+    ; admin_passwd = admin
+    ; csv_internal_sep = ,
+    ; db_maxconn = 64
+    ; db_name = False
+    ; db_template = template1
+    ; dbfilter = .*
+    ; debug_mode = False
+    ; email_from = False
+    ; limit_memory_hard = 2684354560
+    ; limit_memory_soft = 2147483648
+    ; limit_request = 8192
+    ; limit_time_cpu = 60
+    ; limit_time_real = 120
+    ; list_db = True
+    ; log_db = False
+    ; log_handler = [':INFO']
+    ; log_level = info
+    ; logfile = None
+    ; longpolling_port = 7072
+    ; max_cron_threads = 2
+    ; osv_memory_age_limit = 1.0
+    ; osv_memory_count_limit = False
+    ; smtp_password = False
+    ; smtp_port = 25
+    ; smtp_server = localhost
+    ; smtp_ssl = False
+    ; smtp_user = False
+    ; workers = 0
+    ; xmlrpc = True
+    ; xmlrpc_interface = 
+    ; xmlrpc_port = 7073
+    ; xmlrpcs = True
+    ; xmlrpcs_interface = 
+    ; xmlrpcs_port = 8071
+kind: ConfigMap
+metadata:
+  name: flectra-rc
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: flectra
+  labels:
+    name: flectra
+    version: 0.0.1
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: flectra
+    spec:
+        containers:
+        - name: flectra
+          image: oondeo/flectra:1.4
+          imagePullPolicy: Always
+          ports:
+          - containerPort: 7073
+          - containerPort: 7072
+          volumeMounts:
+          - name: flectra-rc
+            mountPath: /etc/flectra
+          env:
+          - name: DB_PORT_5432_TCP_ADDR
+            value: postgres
+          - name: DB_PORT_5432_TCP_PORT
+            value: "5432"
+          - name: DB_ENV_POSTGRES_USER
+            value: oeproduccion
+          - name: DB_ENV_POSTGRES_PASSWORD
+            value: Tre7Z5vZyL38Hwm
+          - name: ADMIN_PASSWORD
+            value: flectra2011
+          - name: XDG_DATA_HOME
+            value: "/var/lib/flectra/.local/share"
+          - name: FLECTRA_WORKERS
+            value: "4"
+          - name: PYTHON_BIN
+            value: /usr/bin/python
+          - name: PIP_BIN
+            value: /usr/bin/pip
+          - name: FLECTRA_SERVER
+            value: /usr/bin/python /opt/flectra/flectra.pyc
+        volumes:
+        - name: flectra-rc
+          configMap:
+            name: flectra-rc
+            items:
+              - key: flectra.conf
+                path: flectra.conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+spec:
+  ports:
+  - name: pgql
+    port: 5432
+    targetPort: 5432
+    protocol: TCP
+  selector:
+    app: postgres
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:9.4
+          env:
+            - name: POSTGRES_USER
+              value: oeproduccion
+            - name: POSTGRES_PASSWORD
+              value: Tre7Z5vZyL38Hwm
+            - name: POSTGRES_DB
+              value: flectra2011
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: pg-data
+      volumes:
+        - name: pg-data
+          emptyDir: {}
