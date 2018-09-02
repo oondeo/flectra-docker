@@ -43,20 +43,45 @@ check_config "db_port" "$PORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
 
+addons=$(ls -1d /mnt/* ${XDG_DATA_HOME:="/var/lib/flectra"}/addons/$FLECTRA_VERSION \
+   /usr/lib/python3/dist-packages/flectra | tr '\n' ',' | sed s/,$//)
+
+EXTRA_ARGS=()
+env -0 | while IFS='=' read -r -d '' n v; do
+    if [ "${n:0:8}" == "FLECTRA_" ]
+    then
+        n=${n:8}
+        n=${n,,}
+        n=${n/_/-}
+        EXTRA_ARGS+=("--$n")
+        EXTRA_ARGS+=("$v")
+        if [ "$n" == "addons-path" ]
+        then
+            addons=""
+        fi
+    fi
+done
+
+if [ "$addons" != "" ]
+then
+    EXTRA_ARGS+="--addons-path"
+    EXTRA_ARGS+="$addons"
+fi
 case "$1" in
     -- | flectra)
         shift
         if [[ "$1" == "scaffold" ]] ; then
             exec flectra "$@"
         else
-            exec flectra "$@" "${DB_ARGS[@]}"
+            exec flectra "$@" "${DB_ARGS[@]}" "${EXTRA_ARGS[@]}"
         fi
         ;;
     -*)
-        exec flectra "$@" "${DB_ARGS[@]}"
+        exec flectra "$@" "${DB_ARGS[@]}" "${EXTRA_ARGS[@]}"
         ;;
     *)
         exec "$@"
 esac
 
 exit 1
+
