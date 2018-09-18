@@ -2,11 +2,6 @@
 
 set -e
 
-if [ -n ${TZ} ]; then
-  rm /etc/localtime
-  ln -sf /usr/share/zoneinfo/${TZ}  /etc/localtime
-fi
-
 #Openshift fix
 if [ `id -u` -ge 10000 ]; then
 #install nss_wrapper gettext
@@ -26,8 +21,8 @@ fi
 # and pass them as arguments to the flectra process if not present in the config file
 : ${HOST:=${DB_PORT_5432_TCP_ADDR:='db'}}
 : ${PORT:=${DB_PORT_5432_TCP_PORT:=5432}}
-: ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRES_USER:='flectra'}}}
-: ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRES_PASSWORD:='flectra'}}}
+: ${USER:=${DB_ENV_POSTGRES_USER:=${POSTGRESQL_USER:=${POSTGRES_USER:='flectra'}}}}
+: ${PASSWORD:=${DB_ENV_POSTGRES_PASSWORD:=${POSTGRESSQL_PASSWORD:=${POSTGRES_PASSWORD:='flectra'}}}}
 
 DB_ARGS=()
 function check_config() {
@@ -43,8 +38,8 @@ check_config "db_port" "$PORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
 
-addons=$(ls -1d /mnt/* ${XDG_DATA_HOME:="/var/lib/flectra"}/addons/$FLECTRA_VERSION \
-   /usr/lib/python3/dist-packages/flectra | tr '\n' ',' | sed s/,$//)
+addons=$(ls -1d /mnt/extra-addons/* ${XDG_DATA_HOME:="/var/lib/flectra"}/addons/$FLECTRA_VERSION \
+   /usr/lib/python3/dist-packages/flectra/addons | tr '\n' ',' | sed s/,$//)
 
 EXTRA_ARGS=()
 env -0 | while IFS='=' read -r -d '' n v; do
@@ -84,4 +79,4 @@ case "$1" in
 esac
 
 exit 1
-
+#flectra --db_host 172.30.48.59 --db_user oeproduccion --db_password Tre7Z5vZyL38Hwm --dev all

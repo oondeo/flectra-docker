@@ -1,69 +1,27 @@
-#Partially from Odoo's dockerfile
-#github.com/odoo/docker
+FROM flectrahq/flectra
 
-FROM debian:stretch
-MAINTAINER FlectraHQ <flectra@flectrahq.com>
-
-# Generate locale C.UTF-8 for postgres and general locale data
-ENV LANG C.UTF-8
-ENV FLECTRA_VERSION=1.4
-ENV FLECTRA_RELEASE=latest
+#Migrate from suds to python-zeep
 
 # Install some deps, lessc and less-plugin-clean-css, and wkhtmltopdf
 RUN set -x; \
-        apt-get update \
-        && apt-get install -y --no-install-recommends \
-            ca-certificates \
-            curl \
-            node-less \
-            python3-pip \
-            python3-setuptools \
-            python3-renderpm \
-            libssl1.0-dev \
+        apt-get update -qq \
+        && DEBIAN_FRONTEND=noninteractive apt-get install -yqq --no-install-recommends \
+            python3-paramiko \
+            python3-crypto \
+            python3-wheel \
+            python3-pil \
+            python3-lasso \
+            python3-watchdog \
+            python3-num2words \
+            libxmlsec1-dev \
             xz-utils \
-	    rsync \
-        && curl -o wkhtmltox.tar.xz -SL https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz \
-        && echo '3f923f425d345940089e44c1466f6408b9619562 wkhtmltox.tar.xz' | sha1sum -c - \
-        && tar xvf wkhtmltox.tar.xz \
-        && cp wkhtmltox/lib/* /usr/local/lib/ \
-        && cp wkhtmltox/bin/* /usr/local/bin/ \
-        && rm -rf /var/lib/apt/lists/* && rm wkhtmltox.tar.xz && rm -rf wkhtmltox
+    	    rsync \
+        && rm -rf /var/lib/apt/lists/*
 
-# Install Flectra
-RUN set -x; \
-        curl -o flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb -SL https://download.flectrahq.com/1.0/pub/deb/flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb \
-		&& curl -o flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_amd64.changes -SL https://download.flectrahq.com/1.0/pub/deb/flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_amd64.changes \
-		&& echo "`sed -n '/^Checksums-Sha1:$/{n;p;n;p;n;p}' flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_amd64.changes | tail -1 | awk '{print $1}'` flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb" | sha1sum -c \
-        && dpkg --force-depends -i flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb \
-        && apt-get update \
-        && apt-get -y install -f --no-install-recommends \
-        && rm -rf /var/lib/apt/lists/* flectra_${FLECTRA_VERSION}.${FLECTRA_RELEASE}_all.deb
-
-# Copy entrypoint script and Flectra configuration file
 COPY ./entrypoint.sh /
-COPY ./flectra.conf /etc/flectra/
-RUN chown flectra /etc/flectra/flectra.conf
-RUN chmod +x /entrypoint.sh
-
-# Mount /var/lib/flectra to allow restoring filestore and /mnt/extra-addons for users addons
-RUN mkdir -p /mnt/extra-addons \
-        && chown -R flectra /mnt/extra-addons
-
-
-# Set the default config file
-ENV FLECTRA_RC /etc/flectra/flectra.conf
 
 #openshift compat
 RUN chgrp -R 0 /mnt/extra-addons /var/lib/flectra && chmod -R 775 /var/lib/flectra /mnt && chmod g+w /etc/passwd  
 
 # Set default user when running the container
 USER 101
-
-# Expose Flectra services
-EXPOSE 7073 7072
-
-#This must be set after run commands
-VOLUME ["/var/lib/flectra", "/mnt"]
-
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["flectra"]
