@@ -43,6 +43,35 @@ spec:
         backend:
           serviceName: flectra
           servicePort: 7072
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: flectra
+spec:
+  host: flectra.192.168.42.40.xip.io
+  port:
+    targetPort: flectra
+  to:
+    kind: Service
+    name: flectra
+    weight: 100
+  wildcardPolicy: None
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: flectra-longpolling
+spec:
+  host: flectra.192.168.42.40.xip.io
+  path: /longpolling
+  port:
+    targetPort: flectra
+  to:
+    kind: Service
+    name: flectra
+    weight: 100
+  wildcardPolicy: None
 --- 
 #oc create configmap flectra-rc --from-file flectra.conf -o yaml 
 apiVersion: v1
@@ -106,6 +135,7 @@ spec:
         containers:
         - name: flectra
           image: oondeo/flectra:1.4
+	  #args: ['sleep','infinity']
           imagePullPolicy: Always
           ports:
           - containerPort: 7073
@@ -113,6 +143,10 @@ spec:
           volumeMounts:
           - name: flectra-rc
             mountPath: /etc/flectra
+          - name: data
+            mountPath: /var/lib/flectra
+          - name: addons
+            mountPath: /mnt/extra-addons           
           env:
           - name: DB_PORT_5432_TCP_ADDR
             value: postgres
@@ -135,6 +169,12 @@ spec:
           - name: FLECTRA_SERVER
             value: /usr/bin/python /opt/flectra/flectra.pyc
         volumes:
+        - name: data
+          persistentVolumeClaim: 
+            claimName: "flectra"        
+        - name: addons
+          persistentVolumeClaim: 
+            claimName: "flectra-addons"          
         - name: flectra-rc
           configMap:
             name: flectra-rc
@@ -185,4 +225,38 @@ spec:
               name: pg-data
       volumes:
         - name: pg-data
-          emptyDir: {}
+          persistentVolumeClaim: 
+            claimName: postgresql
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "postgresql"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: "1G"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "flectra-addons"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: "1G"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: "flectra"
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: "1G"

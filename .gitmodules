@@ -1,0 +1,3 @@
+[submodule "alpine/1.4/root"]
+	path = alpine/1.4/root
+	url = https://github.com/oondeo/docker-scripts-root.git
