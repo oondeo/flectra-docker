@@ -26,7 +26,8 @@ ENV ODOO_VERSION="11.0" \
     FLECTRA_VERSION="1.4" \
     FLECTRA_REV="0"
 
-ENV  ODOO_HOME=$HOME \
+ENV  PYTHONDONTWRITEBYTECODE='' \
+     ODOO_HOME=$HOME \
      ODOO_ADDONS_HOME="/mnt/extra-addons" \
      ODOO_SERVER="flectra" \
      ODOO_MODULE_FILE="__init__.pyc" \

@@ -39,8 +39,8 @@ check_config "db_port" "$PORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
 
-addons=$(echo /mnt/extra-addons/*/ ${XDG_DATA_HOME:="/var/lib/flectra"}/addons/$FLECTRA_VERSION \
-   /usr/lib/python3/dist-packages/flectra/addons | tr '\n' ',' | sed s/,$//)
+addons=$(ls -1d /mnt/extra-addons/*/ ${XDG_DATA_HOME:="/var/lib/flectra"}/Flectra/addons/$FLECTRA_VERSION \
+   /usr/local/lib/python3.7/site-packages/ | tr '\n' ',' | sed s/,$//)
 
 EXTRA_ARGS=()
 env -0 | while IFS='=' read -r -d '' n v; do
