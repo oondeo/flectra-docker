@@ -26,7 +26,8 @@ ENV ODOO_VERSION="11.0" \
     FLECTRA_VERSION="1.4" \
     FLECTRA_REV="0"
 
-ENV  PYTHONDONTWRITEBYTECODE='' \
+ENV  PYTHON_VERSION='3.7' \
+     PYTHONDONTWRITEBYTECODE='' \
      ODOO_HOME=$HOME \
      ODOO_ADDONS_HOME="/mnt/extra-addons" \
      ODOO_SERVER="flectra" \
@@ -48,44 +49,10 @@ RUN curl -Lo  /tmp/GeoLiteCity.dat.gz http://geolite.maxmind.com/download/geoip/
     && rm -rf /tmp/*
 
 
-ARG BUILD_DEPS=' \
-        bzip2-dev \
-		coreutils \
-		dpkg-dev dpkg \
-		expat-dev \
-		findutils \
-		gcc \
-		gdbm-dev \
-		libc-dev \
-		libffi-dev \
-		libnsl-dev \
-		libressl-dev \
-		libtirpc-dev \
-		linux-headers \
-		make \
-		ncurses-dev \
-		pax-utils \
-		readline-dev \
-		sqlite-dev \
-		tcl-dev \
-		tk \
-		tk-dev \
-		util-linux-dev \
-		xz-dev \
-        zlib-dev \
-        git \
-        unzip \
-        xmlsec-dev \
-        libxslt-dev \
-        jpeg-dev \
-        cyrus-sasl-dev \
-        openldap-dev \
-        fontconfig-dev \
-        libxml2-dev \
-        postgresql-dev \
+ENV BUILD_DEPS=" \
         sassc \
         nodejs npm \
-    ' 
+    "
 ARG ODOO_MODULES=""
 ARG PYTHON_MODULES=" \
 Babel \
@@ -142,8 +109,10 @@ RUN apk-install -t .build-deps $BUILD_DEPS \
     && curl -Lo /tmp/flectra.tbz2 $FLECTRA_URL \
     && mkdir -p /tmp/flectra && tar -jxf /tmp/flectra.tbz2 --strip 1 -C /tmp/flectra \
     && cd /tmp/flectra \
+    && sed -i 's/--compass --unix-newlines --sourcemap=none//g' Makefile && make \
     && python setup.py install \
     && cp /tmp/flectra/flectra-bin /usr/local/bin/flectra && chmod +x /usr/local/bin/flectra \
+    && cp -a /tmp/flectra/addons $(python -c "import site; print(site.getsitepackages()[0])")/flectra-$FLECTRA_VERSION-py$PYTHON_VERSION.egg/flectra/ \
     && install-deps /usr/local \
     && npm cache clean --force && rm -rf ~/.cache/pip && rm -rf /tmp/*
 
@@ -156,7 +125,7 @@ ENTRYPOINT [ "/sbin/tini", "-g" ,"--", "container-entrypoint", "/entrypoint.sh" 
 #extra libraries
 ADD https://gitlab.com/flectra-hq/developer-tools/raw/master/flectra_rename_script/odoo_flectra.py /usr/local/bin/odoo_flectra
 
-RUN sed -i 's/# !\/usr\/bin\/python/#!\/usr\/bin\/python3/g' /usr/local/bin/odoo_flectra.py && chmod 755 /usr/local/bin/odoo_flectra \
+RUN sed -i 's/# !\/usr\/bin\/python/#!\/usr\/bin\/python3/g' /usr/local/bin/odoo_flectra && chmod 755 /usr/local/bin/odoo_flectra \
         && cd /tmp && curl -Lo /tmp/master.zip "https://github.com/OCA/maintainer-quality-tools/archive/master.zip" && unzip /tmp/master.zip \
         && mv maintainer-quality-tools-master /opt/maintainer-quality-tools \
         && pip3 install --no-cache-dir ptvsd && pip3 install --no-cache-dir -r /opt/maintainer-quality-tools/requirements.txt \
