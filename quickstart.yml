@@ -1,0 +1,248 @@
+# flectra initialize database: flectra -d scout10.com --db_host $HOST --db_user $POSTGRES_USER --db_password $POSTGRES_PASSWORD --no-http
+---
+apiVersion: v1
+kind: Template
+labels:
+  app: flectra
+  template: flectra-erp
+message: |-
+  The following service(s) have been created in your project: ${NAME}.
+
+  For more information about using this template, including OpenShift considerations, see https://github.com/oondeo/flectra-docker.git.
+metadata:
+  annotations:
+    description: A deployment of flectra .
+    iconClass: icon-python
+    openshift.io/display-name: Flectra ERP
+    openshift.io/documentation-url: https://doc.flectrahq.com/
+    openshift.io/long-description: This template defines resources needed to run an
+      Flectra application.
+    openshift.io/provider-display-name: OONDEO C.B.
+    openshift.io/support-url: https://www.oondeo.es
+    tags: quickstart,python,flectra,odoo
+    template.openshift.io/bindable: 'false'
+  name: flectra-erp
+objects:
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    name: "${NAME}"
+  data:
+    flectra.conf: |
+      [options]
+      data_dir = /var/lib/flectra
+      log_handler = [':INFO','werkzeug:CRITICAL']
+      ; admin_passwd = admin
+      ; csv_internal_sep = ,
+      ; db_maxconn = 64
+      ; db_name = False
+      ; db_template = template1
+      ; dbfilter = .*
+      ; debug_mode = False
+      ; email_from = False
+      ; limit_memory_hard = 2684354560
+      ; limit_memory_soft = 2147483648
+      ; limit_request = 8192
+      ; limit_time_cpu = 60
+      ; limit_time_real = 120
+      ; list_db = True
+      ; log_db = False
+      ; log_handler = [':INFO']
+      ; log_level = info
+      ; logfile = None
+      ; longpolling_port = 7072
+      ; max_cron_threads = 2
+      ; osv_memory_age_limit = 1.0
+      ; osv_memory_count_limit = False
+      ; smtp_password = False
+      ; smtp_port = 25
+      ; smtp_server = localhost
+      ; smtp_ssl = False
+      ; smtp_user = False
+      ; workers = 0
+      ; xmlrpc = True
+      ; xmlrpc_interface =
+      ; xmlrpc_port = 7073
+      ; xmlrpcs = True
+      ; xmlrpcs_interface =
+      ; xmlrpcs_port = 8071
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: "${NAME}"
+  stringData:
+    database-password: "${DATABASE_PASSWORD}"
+    database-user: "${DATABASE_USER}"
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: Exposes and load balances the application pods
+      service.alpha.openshift.io/dependencies: '[{"name": "${DATABASE_SERVICE_NAME}",
+        "kind": "Service"}]'
+    name: "${NAME}"
+  spec:
+    ports:
+    - name: web
+      port: 7073
+      targetPort: 7073
+    - name: chat
+      port: 7072
+      targetPort: 7072     
+    selector:
+      name: "${NAME}"  
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: "${NAME}"
+  spec:
+    host: "${APPLICATION_DOMAIN}"
+    tls:
+      insecureEdgeTerminationPolicy: Redirect
+      termination: edge    
+    to:
+      kind: Service
+      name: "${NAME}"
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    annotations:
+      description: Defines how to deploy the application server
+      template.alpha.openshift.io/wait-for-ready: 'true'
+    name: "${NAME}"
+  spec:
+    replicas: 1
+    selector:
+      name: "${NAME}"
+    template:
+      metadata:
+        labels:
+          name: "${NAME}"
+        name: "${NAME}"
+      spec:
+        containers:
+        - env:
+          - name: HOST
+            value: "${DATABASE_SERVICE_NAME}"
+          - name: POSTGRES_USER
+            valueFrom:
+              secretKeyRef:
+                key: database-user
+                name: "${NAME}"
+          - name: POSTGRES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: database-password
+                name: "${NAME}"
+          image: " "
+          name: flectra
+          args:
+          - flectra
+          - --no-database-list
+          volumeMounts:
+          - mountPath: "/var/lib/flectra"
+            name: "${NAME}-data"
+          - mountPath: "/etc/flectra"
+            name: "flectra-config"
+          resources:
+            limits:
+              memory: "${MEMORY_LIMIT}"
+        volumes:
+        - name: "${NAME}-data"
+          persistentVolumeClaim:
+            claimName: "${NAME}"
+        - name: "flectra-config"
+          configMap:
+            name: "${NAME}"          
+    triggers:
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - flectra
+        from:
+          kind: ImageStreamTag
+          name: "flectra:${IMAGE_VERSION}"
+          namespace: "${NAMESPACE}"
+      type: ImageChange
+    - type: ConfigChange
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: "${NAME}"
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    storageClassName: local-storage
+    selector:
+      matchLabels:
+        name: "${NAME}"         
+    resources:
+      requests:
+        storage: "${VOLUME_CAPACITY}"        
+parameters:
+- description: The name assigned to all of the frontend objects defined in this template.
+  displayName: Name
+  name: NAME
+  required: true
+  value: flectra-erp
+- description: The OpenShift Namespace where the ImageStream resides.
+  displayName: Namespace
+  name: NAMESPACE
+  required: true
+  value: openshift
+- description: Version of Flectra (latest,1,1.4,1.5,1.6)
+  displayName: Flectra Version
+  name: IMAGE_VERSION
+  required: true
+  value: '1.6'
+- description: Maximum amount of memory container can use.
+  displayName: Memory Limit
+  name: MEMORY_LIMIT
+  required: true
+  value: 1024Mi
+- description: Volume space available for data, e.g. 512Mi, 2Gi
+  displayName: Volume Capacity
+  name: VOLUME_CAPACITY
+  required: true
+  value: 12Gi
+- description: The URL of the repository with your application source code.
+  displayName: Git Repository URL
+  name: SOURCE_REPOSITORY_URL
+  required: true
+  value: https://github.com/oondeo/flectra
+- description: Set this to a branch name, tag or other ref of your repository if you
+    are not using the default branch.
+  displayName: Git Reference
+  name: SOURCE_REPOSITORY_REF
+- description: The exposed hostname that will route to the CakePHP service, if left
+    blank a value will be defaulted.
+  displayName: Application Hostname
+  name: APPLICATION_DOMAIN
+  value: ''
+- description: Github trigger secret.  A difficult to guess string encoded as part
+    of the webhook URL.  Not encrypted.
+  displayName: GitHub Webhook Secret
+  from: "[a-zA-Z0-9]{40}"
+  generate: expression
+  name: GITHUB_WEBHOOK_SECRET
+- displayName: Database Service Name
+  name: DATABASE_SERVICE_NAME
+  required: true
+  value: postgresql.oondeo
+- description: 'Database engine: postgresql, mysql or sqlite (default).'
+  displayName: Database Engine
+  name: DATABASE_ENGINE
+  required: true
+  value: postgresql
+- displayName: Database Name
+  name: DATABASE_NAME
+  required: true
+  value: flectra
+- displayName: Database User
+  name: DATABASE_USER
+  required: true
+  value: flectra
+- displayName: Database Password
+  from: "[a-zA-Z0-9]{16}"
+  generate: expression
+  name: DATABASE_PASSWORD
