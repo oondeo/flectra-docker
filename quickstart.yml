@@ -97,12 +97,29 @@ objects:
     name: "${NAME}"
   spec:
     host: "${APPLICATION_DOMAIN}"
+    port:
+      targetPort: web    
     tls:
       insecureEdgeTerminationPolicy: Redirect
       termination: edge    
     to:
       kind: Service
       name: "${NAME}"
+- apiVersion: v1
+  kind: Route
+  metadata:
+    name: "${NAME}-longpolling"
+  spec:
+    host: "${APPLICATION_DOMAIN}"
+    path: /longpolling
+    port:
+      targetPort: chat    
+    tls:
+      insecureEdgeTerminationPolicy: Redirect
+      termination: edge    
+    to:
+      kind: Service
+      name: "${NAME}"      
 - apiVersion: v1
   kind: DeploymentConfig
   metadata:

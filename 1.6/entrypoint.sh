@@ -13,7 +13,10 @@ if [ `id -u` -ge 10000 ]; then
 # export NSS_WRAPPER_GROUP=/etc/group
     if ! whoami &> /dev/null; then
         if [ -w /etc/passwd ]; then
-            echo "${USER_NAME:-flectra}:x:$(id -u):0:${USER_NAME:-flectra} user:${HOME}:/sbin/nologin" >> /etc/passwd
+            sed "/^${USER_NAME:-flectra}:/d" /etc/passwd > /tmp/.passwd
+            echo "${USER_NAME:-flectra}:x:$(id -u):0:${USER_NAME:-flectra} user:${HOME}:/sbin/nologin" >> /tmp/.passwd
+            cat /tmp/.passwd > /etc/passwd
+            rm /tmp/.passwd
         fi
     fi
 fi
@@ -39,7 +42,7 @@ check_config "db_port" "$PORT"
 check_config "db_user" "$USER"
 check_config "db_password" "$PASSWORD"
 
-addons=$(ls -1d /mnt/extra-addons/* | tr '\n' ',' | sed s/,$//)
+addons=$(ls -1d /mnt/extra-addons/* /opt/addons/* | tr '\n' ',' | sed s/,$//)
 
 EXTRA_ARGS=()
 env -0 | while IFS='=' read -r -d '' n v; do
